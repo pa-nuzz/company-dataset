@@ -1,0 +1,22 @@
+{
+ "frozen_at": "2026-11-01",
+ "note": "Matching methodology frozen after Phase 1d (vendor-declared Ashby/Lever websites, four evaluated domain rules, country second-level domains). Changes only for a critical correctness issue, recorded here.",
+ "tests": "481 passed in 0.58s",
+ "validated_on": "data/exports/pilot3_frozen (= pilot3_frozen_repro)",
+ "code_sha256": {
+  "pilot.py": "380ded19901378d1a4a39a081207c2b2e9db037a9b2e82887e15ca2409e9c648",
+  "identity.py": "13c610bdbb7b91832ec69a0069ea7324b71d117ea4526f34efbb13883f503f0e",
+  "careersite.py": "6f83e21b8096ba25d091369e150ba1fc52bdb307b78a7ea7eabb9ca526a23a59",
+  "enrichment.py": "cfe05b9667ed7f4defd0268420dab7cf2764c1f99af77f6a873daf61145c3d84",
+  "normalize.py": "bd64019117c6649764e5bb83d5a51feca06fc2391d17bbe84de6df4ec2f788fb",
+  "platforms.py": "c8178d3b25051130347fd7c567a76f7185c22d6d74dc1e0ce70cc59372354272",
+  "validate.py": "0068ae4c7cf02c33f75e766f2ae2f63bed38cfad0f3d37730e9c611280d50073",
+  "validate_extra.py": "645c885f7a5255ba3d88769ed6312e4c63832ccc8a653fde7b30f020bd665c48",
+  "verification.py": "b0b9596d766c2d03a70ed14ef8e33f757437bb6c6814404177b726c8fc0ce074",
+  "reference.py": "e524912668dbf29b56cee07c8e1466ccef033eefbccf1b33d21cd668dd385430",
+  "wikidata.py": "b8e434ab2996050d4959ba21291a217cd27e088e4368ea24fb52752e1705406e",
+  "resolve.py": "94af3db66d65095b1c995edae3ec033bbc2549b56f23f21524bf798c16ee7a83",
+  "store.py": "96ede2f7851b798723d451d23965cda0d3ce1263e507e8e5f88e93c8dbef2e6d",
+  "store_export.py": "1222366e88d3e5e399dc17289d8f89127ffbda84babcaf2f0889644e872c3894"
+ }
+}

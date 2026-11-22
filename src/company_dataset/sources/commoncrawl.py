@@ -34,11 +34,15 @@ PREFIXES = [
     "co,lever,jobs)/",
     "co,lever,eu,jobs)/",
     "com,ashbyhq,jobs)/",
+    "com,smartrecruiters,careers)/",
+    "com,smartrecruiters,jobs)/",
+    "com,smartrecruiters,api)/",
+    "hr,breezy,",
 ]
 
 META = SourceMeta(
     name="commoncrawl",
-    description=f"Common Crawl CDX index harvest of board URLs on Greenhouse, Lever and Ashby hosts ({len(CRAWLS)} crawls, {CRAWLS[-1]} to {CRAWLS[0]})",
+    description=f"Common Crawl CDX index harvest of board URLs on Greenhouse, Lever, Ashby, SmartRecruiters and Breezy HR hosts ({len(CRAWLS)} crawls, {CRAWLS[-1]} to {CRAWLS[0]})",
     download_url="https://data.commoncrawl.org/cc-index/collections/",
     filename="tokens.csv",
     license="Common Crawl Terms of Use",

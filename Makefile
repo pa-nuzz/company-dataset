@@ -9,7 +9,7 @@ test:
 	.venv/bin/pytest -q
 
 run:
-	.venv/bin/company-dataset all
+	.venv/bin/company-dataset-legacy all
 
 all: install test run
 

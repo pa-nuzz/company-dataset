@@ -169,6 +169,10 @@ def resolve_board(board: Board, outcome: dict, pages: dict, ref, source_name: st
             if variant and is_english(variant) and host_of(page.get("final_url") or url).removeprefix("www.") == host_of(website).removeprefix("www."):
                 description, description_src = variant, "homepage_meta_english_page"
                 break
+    if not description and board.ats == "workable":
+        wk = clean_description(outcome.get("description"))
+        if wk:
+            description, description_src = wk, "workable_account_description"
     if not description and board.ats == "greenhouse":
         gh = clean_description(outcome.get("description"))
         if gh and is_english(gh):

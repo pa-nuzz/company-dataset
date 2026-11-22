@@ -320,3 +320,26 @@ def test_normalize_country_name():
     assert normalize_country_name("") is None
     assert normalize_country_name("Atlantis") is None
     assert normalize_country_name(None) is None
+
+
+def test_vendor_sandbox_and_seeded_candidate_boards_are_test_boards():
+    from company_dataset.enrichment import is_test_board
+
+    assert is_test_board("Sandbox: Millennium Hotels", "sandboxmillenniumhotels-demo")
+    assert is_test_board("Sandbox: Artea Bankas", "x")
+    assert is_test_board("ACME candidate 1", "acme")
+    assert is_test_board("Whatever", "acme-demo")
+    assert not is_test_board("Sandbox VR", "sandboxvr")
+    assert not is_test_board("Sandbox Interactive", "sandboxinteractive")
+
+
+def test_page_title_ignores_inline_svg_titles():
+    html = ("<html><head><title>Squarepoint | Home</title></head><body>"
+            "<svg><title>Squarepoint logo</title></svg><svg><title>Facebook</title></svg></body></html>")
+    assert parse_page(html).title == "Squarepoint | Home"
+    # A title that only appears after an icon is still the page's title.
+    assert parse_page("<svg><title>Menu</title></svg><title>Acme</title>").title == "Acme"
+    # Only the first document title counts.
+    assert parse_page("<title>First</title><title>Second</title>").title == "First"
+    # An entity split across parser callbacks still reads as one title.
+    assert parse_page("<title>Tom &amp; Jerry</title>").title == "Tom & Jerry"

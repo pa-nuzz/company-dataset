@@ -1,6 +1,7 @@
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import requests
@@ -114,7 +115,41 @@ class HttpClient:
             return HttpResponse(status, _decode(resp), resp.url)
         raise RequestError(str(last_error))
 
+    def post_json(self, url: str, payload: dict) -> HttpResponse:
+        """POST a JSON body with the same throttling and retry rules as get()."""
+        throttle = self._throttle(url)
+        last_error: Exception | None = None
+        for attempt in range(1, self.max_attempts + 1):
+            throttle.wait()
+            try:
+                resp = self.session.post(url, json=payload, timeout=self.timeout)
+            except Exception as exc:
+                last_error = exc
+                if attempt < self.max_attempts:
+                    self._backoff(attempt)
+                    continue
+                raise RequestError(str(exc)) from exc
+            status = resp.status_code
+            if status in self.RETRYABLE and attempt < self.max_attempts:
+                self._backoff(attempt)
+                continue
+            return HttpResponse(status, _decode(resp), resp.url)
+        raise RequestError(str(last_error))
+
     def _backoff(self, attempt: int):
         import random
 
         self.sleep(self.backoff_base**attempt + random.random() * 0.5)
+
+
+def stream_to(client: HttpClient, url: str, dest: Path) -> int:
+    """Stream a URL to disk as bytes; returns the HTTP status."""
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    with client.session.get(url, timeout=client.timeout, stream=True) as resp:
+        if resp.status_code != 200:
+            return resp.status_code
+        with open(tmp, "wb") as fh:
+            for chunk in resp.iter_content(1 << 20):
+                fh.write(chunk)
+    tmp.replace(dest)
+    return 200

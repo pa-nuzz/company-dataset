@@ -7,6 +7,8 @@ LATMAY_CSV = "\ufeffcanonical_url,ats_platform\n" + (
     "https://job-boards.greenhouse.io/acme,Greenhouse\n"
     "https://jobs.lever.co/leverco,Lever\n"
     "https://jobs.ashbyhq.com/ashbyco,Ashby\n"
+    "https://10percent.breezy.hr,Breezy HR\n"
+    "https://careers.smartrecruiters.com/AbbVie,SmartRecruiters\n"
     "https://3m.wd1.myworkdayjobs.com/Search,Workday\n"
     "https://jobs.lever.co/,Lever\n"
     "https://job-boards.greenhouse.io/.well-known,Greenhouse\n"
@@ -46,12 +48,15 @@ def test_latmay_parses_and_rejects(tmp_path):
         ("greenhouse", "acme"),
         ("lever", "leverco"),
         ("ashby", "ashbyco"),
+        ("breezy", "10percent"),
+        ("smartrecruiters", "AbbVie"),
+        ("workday", "3m.wd1/Search"),
         ("lever", "leverco"),
     ]
     assert records[0].source == latmay.META.name
     assert records[0].careersite_url == "https://job-boards.greenhouse.io/acme"
     reasons = sorted(r.reason for r in rejects)
-    assert reasons == ["unparseable_url", "unparseable_url", "unsupported_ats"]
+    assert reasons == ["unparseable_url", "unparseable_url"]
 
 
 def test_lastround_parses(tmp_path):
@@ -71,8 +76,10 @@ def test_kaleb_parses_with_eu_region(tmp_path):
     path = tmp_path / "kaleb.csv"
     path.write_text(KALEB_CSV, encoding="utf-8")
     records, rejects = kaleb.parse(path)
-    assert len(records) == 3
-    assert [r.reason for r in rejects] == ["unsupported_ats"]
+    assert len(records) == 4
+    assert rejects == []
+    workable = next(r for r in records if r.ats == "workable")
+    assert (workable.code, workable.careersite_url) == ("hf", "https://apply.workable.com/hf")
     lever = next(r for r in records if r.ats == "lever")
     assert lever.code == "aavelabs"
     assert lever.region == "eu"
@@ -89,6 +96,7 @@ def test_moonie_parses_statuses(tmp_path):
     assert [(r.ats, r.code) for r in records] == [
         ("greenhouse", "anthropic"),
         ("lever", "bunq"),
+        ("recruitee", "x"),
         ("lever", "maybe"),
     ]
     bunq = next(r for r in records if r.code == "bunq")
@@ -96,7 +104,7 @@ def test_moonie_parses_statuses(tmp_path):
     anthropic = next(r for r in records if r.code == "anthropic")
     assert anthropic.name == "Anthropic"
     reasons = sorted(r.reason for r in rejects)
-    assert reasons == ["blank_line", "source_marked_dead", "unsupported_ats"]
+    assert reasons == ["blank_line", "source_marked_dead"]
     assert all(r.source == moonie.META.name for r in rejects)
 
 
@@ -204,17 +212,123 @@ class TestFeashliaa:
         assert "feashliaa" in feashliaa.META.name
 
 
-def test_openatsfeed_keeps_only_our_three_ats(tmp_path):
+def test_openatsfeed_keeps_only_supported_ats(tmp_path):
     path = tmp_path / "tokens.json"
-    path.write_text('{"greenhouse": ["acme", " ", "abridge\\\\"], "ashby": ["Applied Compute"], "workable": ["x"]}')
+    path.write_text('{"greenhouse": ["acme", " ", "abridge\\\\"], "ashby": ["Applied Compute"], "jazzhr": ["x"]}')
     records, rejects = openatsfeed.parse(path)
     assert [(r.ats, r.code) for r in records] == [("greenhouse", "acme"), ("greenhouse", "abridge"), ("ashby", "Applied Compute")]
     assert len(rejects) == 1
 
 
+def test_openatsfeed_keeps_breezy_and_smartrecruiters(tmp_path):
+    path = tmp_path / "tokens.json"
+    path.write_text('{"breezy": ["10percent", "www", "api"], "smartrecruiters": ["AbbVie", ""], "jazzhr": ["x"]}')
+    records, rejects = openatsfeed.parse(path)
+    assert [(r.ats, r.code) for r in records] == [("breezy", "10percent"), ("smartrecruiters", "AbbVie")]
+    assert len(rejects) == 3
+
+
 def test_headcountlabs_parse(tmp_path):
     path = tmp_path / "boards.csv"
-    path.write_text("ats,code,employer_name\nashby,0g,0g Labs\nworkday,x,X\ngreenhouse,,Nope\n")
+    path.write_text("ats,code,employer_name\nashby,0g,0g Labs\njazzhr,x,X\ngreenhouse,,Nope\n")
     records, rejects = headcountlabs.parse(path)
     assert [(r.ats, r.code, r.name) for r in records] == [("ashby", "0g", "0g Labs")]
     assert sorted(r.reason for r in rejects) == ["invalid_slug", "unsupported_ats"]
+
+
+def test_kalil_parses_urls_and_checks_file_platform(tmp_path):
+    from company_dataset.sources import kalil
+
+    path = tmp_path / "companies.csv"
+    path.write_text(
+        "file_ats,name,slug,url\n"
+        "workable,0x,0x,https://apply.workable.com/0x\n"
+        "workday,23Andme,23andme/23,https://23andme.wd5.myworkdayjobs.com/23\n"
+        "icims,360care LLC,360care,https://careers-360care.icims.com\n"
+        "join,Klarkode GmbH,02100,https://join.com/companies/02100\n"
+        "bamboohr,Wrong,wrong,https://wrong.recruitee.com\n"
+        "paycom,X,x,https://www.paycomonline.net/v4/ats/web.php/portal/x/career-page\n",
+        encoding="utf-8",
+    )
+    records, rejects = kalil.parse(path)
+    assert [(r.ats, r.code, r.name) for r in records] == [
+        ("workable", "0x", "0x"),
+        ("workday", "23andme.wd5/23", "23Andme"),
+        ("icims", "careers-360care", "360care LLC"),
+        ("join", "02100", "Klarkode GmbH"),
+    ]
+    assert sorted(r.reason for r in rejects) == ["platform_url_mismatch", "unsupported_ats"]
+
+
+def test_feashliaa_workday_and_icims_slug_formats(tmp_path):
+    path = tmp_path / "companies.json"
+    path.write_text(json.dumps({
+        "workday": ["2020companies|wd1|external_careers", "broken|wd1", "wd503|wd1|smartbank"],
+        "icims": ["142designgroup", "-careers-harrowcouncil"],
+        "bamboohr": ["10web"],
+    }))
+    records, rejects = feashliaa.parse(path)
+    assert [(r.ats, r.code) for r in records] == [
+        ("workday", "2020companies.wd1/external_careers"),
+        ("icims", "careers-142designgroup"),
+        ("icims", "careers-harrowcouncil"),
+        ("bamboohr", "10web"),
+    ]
+    # Upstream also lists shard names as tenants ("wd503|wd1|smartbank"): malformed, not a board.
+    assert [r.reason for r in rejects] == ["invalid_slug", "invalid_slug"]
+
+
+def test_joa_takes_board_tokens_from_apply_urls_once(tmp_path):
+    from company_dataset.sources import joa
+
+    path = tmp_path / "joa.jsonl"
+    path.write_text(
+        '{"employer": "Dovetail", "apply_url": "https://jobs.ashbyhq.com/dovetail/7902/application"}\n'
+        '{"employer": "Dovetail", "apply_url": "https://jobs.ashbyhq.com/dovetail/8000/application"}\n'
+        '{"employer": "JD Sports", "apply_url": "https://job-boards.eu.greenhouse.io/jdsports/jobs/1"}\n'
+        '{"employer": "Own Site", "apply_url": "https://careers.example.com/1"}\n'
+        "not json\n",
+        encoding="utf-8",
+    )
+    records, rejects = joa.parse(path)
+    assert [(r.ats, r.code, r.region, r.name) for r in records] == [
+        ("ashby", "dovetail", None, "Dovetail"),
+        ("greenhouse", "jdsports", "eu", "JD Sports"),
+    ]
+    assert [r.reason for r in rejects] == ["invalid_json"]
+
+
+HARVEST_ONLY = ("africa_ats", "builder_jobs", "commoncrawl_gapfill", "jobanalytics", "legacy_subdomains")
+
+
+def test_harvested_adapters_are_registered_but_never_downloaded(tmp_path):
+    from company_dataset.config import resolve_dirs
+    from company_dataset.legacy.download import run_download
+    from company_dataset.http import HttpClient
+    from company_dataset.sources import SOURCES
+
+    by_name = {mod.META.name: mod for mod in SOURCES}
+    for name in HARVEST_ONLY:
+        assert by_name[name].META.downloadable is False
+
+    class NoNetwork:
+        def get(self, url, **kwargs):
+            assert not any(host in url for host in ("github.com/Thelastpoet", "github.com/zachproffitt", "github.com/RichJacobs69", "cc-index/collections")), url
+            raise OSError("offline")
+
+    dirs = resolve_dirs(tmp_path)
+    entries = {e["source"]: e for e in run_download(dirs, client=HttpClient(session=NoNetwork(), sleep=lambda s: None, max_attempts=1))}
+    for name in HARVEST_ONLY:
+        assert entries[name]["error"] == "not downloadable: harvested once, raw file kept outside the pipeline"
+        assert not (dirs["raw"] / name / "tokens.csv").exists()
+
+
+def test_harvested_adapter_with_no_raw_file_reports_file_missing(tmp_path):
+    from company_dataset import store
+    from company_dataset.sources import africa_ats
+    from company_dataset.ingest import import_sources
+
+    conn = store.connect(tmp_path / "s.db")
+    report = import_sources(conn, tmp_path, "t", modules=[africa_ats])
+    assert report["africa_ats"]["status"] == "file_missing"
+    assert conn.execute("SELECT COUNT(*) FROM sources").fetchone()[0] == 0

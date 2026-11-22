@@ -1,10 +1,18 @@
+import pytest
+
 from company_dataset.normalize import (
+    clean_website,
+    normalize_linkedin,
     ASHBY,
+    BREEZY,
     GREENHOUSE,
     LEVER,
+    SMARTRECRUITERS,
+    SUPPORTED_ATS,
     ParsedBoard,
     canonical_api_url,
     canonical_board_url,
+    clean_code,
     is_valid_slug,
     parse_board_url,
 )
@@ -84,10 +92,64 @@ def test_ashby_percent_encoded_slug():
     assert parse_board_url("https://jobs.ashbyhq.com/%2410.2K") == ParsedBoard(ASHBY, "$10.2K", None)
 
 
+def test_smartrecruiters_board_hosts():
+    assert parse_board_url("https://careers.smartrecruiters.com/AbbVie") == ParsedBoard(SMARTRECRUITERS, "AbbVie", None)
+    assert parse_board_url("https://jobs.smartrecruiters.com/AbbVie") == ParsedBoard(SMARTRECRUITERS, "AbbVie", None)
+    assert parse_board_url("https://jobs.smartrecruiters.com/AbbVie/12345-job-title") == ParsedBoard(SMARTRECRUITERS, "AbbVie", None)
+
+
+def test_smartrecruiters_api_url():
+    assert parse_board_url("https://api.smartrecruiters.com/v1/companies/AbbVie/postings?limit=100") == ParsedBoard(SMARTRECRUITERS, "AbbVie", None)
+
+
+def test_smartrecruiters_rejects_empty_token():
+    assert parse_board_url("https://careers.smartrecruiters.com/") is None
+    assert parse_board_url("https://api.smartrecruiters.com/v1/companies/") is None
+
+
+def test_breezy_board_hosts():
+    assert parse_board_url("https://10percent.breezy.hr") == ParsedBoard(BREEZY, "10percent", None)
+    assert parse_board_url("https://10percent.breezy.hr/") == ParsedBoard(BREEZY, "10percent", None)
+    assert parse_board_url("https://10percent.breezy.hr/json") == ParsedBoard(BREEZY, "10percent", None)
+    assert parse_board_url("https://10percent.breezy.hr/p/abc123") == ParsedBoard(BREEZY, "10percent", None)
+
+
+def test_breezy_reserved_and_bare_hosts_are_not_boards():
+    for url in (
+        "https://www.breezy.hr",
+        "https://www.breezy.hr/json",
+        "https://www.breezy.hr/breezy.hr",
+        "https://breezy.hr",
+        "https://breezy.hr/json",
+        "https://breezy.hr/breezy.hr",
+        "https://api.breezy.hr/json",
+        "https://app.breezy.hr",
+        "https://developer.breezy.hr",
+        "https://help.breezy.hr",
+        "https://status.breezy.hr",
+    ):
+        assert parse_board_url(url) is None
+
+
+def test_breezy_rejects_reserved_tokens_from_clean_code():
+    for token in ("api", "app", "developer", "help", "status", "www", "API", "WWW"):
+        assert clean_code(BREEZY, token) is None
+    assert clean_code(BREEZY, "10percent") == "10percent"
+
+
+def test_breezy_multi_label_host_is_not_a_board():
+    assert parse_board_url("https://foo.bar.breezy.hr") is None
+
+
+def test_supported_ats_includes_new_boards():
+    assert SMARTRECRUITERS in SUPPORTED_ATS
+    assert BREEZY in SUPPORTED_ATS
+
+
 def test_non_ats_urls_return_none():
     assert parse_board_url("https://example.com/careers") is None
     assert parse_board_url("https://www.greenhouse.io/") is None
-    assert parse_board_url("https://apply.workable.com/huggingface") is None
+    assert parse_board_url("https://jobs.jobvite.com/huggingface") is None
     assert parse_board_url("https://jobs.eu.lever.co") is None
 
 
@@ -147,6 +209,8 @@ def test_canonical_board_urls():
     assert canonical_board_url(LEVER, "acme") == "https://jobs.lever.co/acme"
     assert canonical_board_url(LEVER, "acme", "eu") == "https://jobs.eu.lever.co/acme"
     assert canonical_board_url(ASHBY, "acme") == "https://jobs.ashbyhq.com/acme"
+    assert canonical_board_url(SMARTRECRUITERS, "AbbVie") == "https://careers.smartrecruiters.com/AbbVie"
+    assert canonical_board_url(BREEZY, "10percent") == "https://10percent.breezy.hr"
 
 
 def test_canonical_api_urls():
@@ -154,8 +218,45 @@ def test_canonical_api_urls():
     assert canonical_api_url(LEVER, "acme") == "https://api.lever.co/v0/postings/acme?mode=json"
     assert canonical_api_url(LEVER, "acme", "eu") == "https://api.eu.lever.co/v0/postings/acme?mode=json"
     assert canonical_api_url(ASHBY, "acme") == "https://api.ashbyhq.com/posting-api/job-board/acme"
+    assert canonical_api_url(SMARTRECRUITERS, "AbbVie") == "https://api.smartrecruiters.com/v1/companies/AbbVie/postings?limit=100"
+    assert canonical_api_url(BREEZY, "10percent") == "https://10percent.breezy.hr/json"
 
 
 def test_canonical_quotes_special_codes():
     assert canonical_board_url(LEVER, "11:11Media") == "https://jobs.lever.co/11%3A11Media"
     assert canonical_api_url(ASHBY, "$10.2K") == "https://api.ashbyhq.com/posting-api/job-board/%2410.2K"
+
+
+def test_greenhouse_eu_hosts_parse_with_region():
+    pb = parse_board_url("https://job-boards.eu.greenhouse.io/jdsports/jobs/5012680101")
+    assert (pb.ats, pb.code, pb.region) == ("greenhouse", "jdsports", "eu")
+    from company_dataset.normalize import canonical_api_url, canonical_board_url
+    assert canonical_board_url("greenhouse", "jdsports", "eu") == "https://job-boards.eu.greenhouse.io/jdsports"
+    # One API serves both instances.
+    assert canonical_api_url("greenhouse", "jdsports", "eu") == "https://boards-api.greenhouse.io/v1/boards/jdsports/jobs"
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("https://www.linkedin.com/company/acme", "https://www.linkedin.com/company/acme"),
+    ("https://www.linkedin.com/company/acme/", "https://www.linkedin.com/company/acme"),
+    ("https://www.linkedin.com/company/acme///", "https://www.linkedin.com/company/acme"),
+    ("http://linkedin.com/company/Acme?trk=x#about", "https://www.linkedin.com/company/Acme"),
+    ("linkedin.com/company/acme/", "https://www.linkedin.com/company/acme"),
+    ("https://ca.linkedin.com/company/acme", "https://www.linkedin.com/company/acme"),
+    ("https://www.linkedin.com/company/acme/jobs", None),
+    ("https://www.linkedin.com/", None),
+    ("https://notlinkedin.com/company/acme", None),
+    ("", None),
+    (None, None),
+])
+def test_normalize_linkedin(raw, expected):
+    assert normalize_linkedin(raw) == expected
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("buildops.com", "https://buildops.com"),
+    ("https://buildops.com/", "https://buildops.com"),
+    ("HTTP://Example.COM/path", "http://example.com"),
+])
+def test_clean_website_adds_a_missing_scheme(raw, expected):
+    assert clean_website(raw) == expected

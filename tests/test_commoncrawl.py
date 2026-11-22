@@ -88,7 +88,7 @@ class TestCommonCrawl:
 
     def test_parse_rejects_invalid_ats(self, tmp_path: Path):
         path = tmp_path / "tokens.csv"
-        path.write_text("ats,code\nworkday,acme\ngreenhouse,stripe\n")
+        path.write_text("ats,code\njazzhr,acme\ngreenhouse,stripe\n")
         records, rejects = commoncrawl.parse(path)
         assert len(records) == 1
         assert len(rejects) == 1

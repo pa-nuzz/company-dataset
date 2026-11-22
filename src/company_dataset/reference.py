@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import csv
 import gzip
+import hashlib
 import json
 import re
 from collections import defaultdict
 from pathlib import Path
+
+import duckdb
 
 from company_dataset.models import SourceMeta, utc_now
 from company_dataset.normalize import clean_website, host_of
@@ -31,6 +34,7 @@ META = SourceMeta(
 )
 
 csv.field_size_limit(10**8)
+INDEX_VERSION = 1  # bump when _scan changes what a row means
 
 
 def name_key(name) -> str:
@@ -111,26 +115,97 @@ class Reference:
         return {"by_domain": self.by_domain, "by_name": self.by_name}
 
 
-def build(path: Path, domains: set[str], names: set[str]) -> Reference:
-    by_domain: dict[str, list[dict]] = defaultdict(list)
-    by_name: dict[str, list[dict]] = defaultdict(list)
+def _scan(path: Path):
+    """Every row with a website, parsed the way every lookup reads it."""
     with gzip.open(path, "rt", encoding="utf-8", errors="ignore", newline="") as fh:
         for row in csv.DictReader(fh):
-            dom = host_of(row.get("website") or "")
-            key = name_key(row.get("name"))
-            if not (dom in domains or key in names):
-                continue
-            rec = {
+            yield {
+                "website": host_of(row.get("website") or ""),
+                "key": name_key(row.get("name")),
                 "name": (row.get("name") or "").strip(),
-                "website": dom,
                 "handle": (row.get("handle") or "").strip(),
                 "country": (row.get("country_code") or "").strip().upper(),
             }
-            if dom:
-                by_domain[dom].append(rec)
-            if key in names and dom:
-                by_name[key].append(rec)
+
+
+def _collect(rows, domains: set[str], names: set[str]) -> Reference:
+    by_domain: dict[str, list[dict]] = defaultdict(list)
+    by_name: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        dom, key = row["website"], row["key"]
+        if not dom or not (dom in domains or key in names):
+            continue
+        rec = {"name": row["name"], "website": dom, "handle": row["handle"], "country": row["country"]}
+        by_domain[dom].append(rec)
+        if key in names:
+            by_name[key].append(rec)
     return Reference(dict(by_domain), dict(by_name))
+
+
+def _index_path(path: Path, cache_dir: Path) -> Path:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(chunk)
+    return Path(cache_dir) / f"bigpicture_v{INDEX_VERSION}_{Path(path).stat().st_size}_{digest.hexdigest()[:16]}.duckdb"
+
+
+def _build_index(path: Path, index: Path) -> None:
+    """Written beside its final name and moved into place, so an interrupted build is never read."""
+    index.parent.mkdir(parents=True, exist_ok=True)
+    work = index.with_suffix(".building")
+    rows_csv = index.with_suffix(".rows.csv")
+    work.unlink(missing_ok=True)
+    try:
+        with open(rows_csv, "w", encoding="utf-8", newline="") as fh:
+            w = csv.writer(fh)
+            for seq, row in enumerate(_scan(path)):
+                if row["website"]:
+                    w.writerow([seq, row["website"], row["key"], row["name"], row["handle"], row["country"]])
+        con = duckdb.connect(str(work))
+        try:
+            con.execute(
+                "CREATE TABLE companies AS SELECT * FROM read_csv(?, header=false, delim=',', quote='\"', escape='\"', parallel=false, auto_detect=false,"
+                " columns={'seq': 'BIGINT', 'website': 'VARCHAR', 'key': 'VARCHAR', 'name': 'VARCHAR', 'handle': 'VARCHAR', 'country': 'VARCHAR'})",
+                [str(rows_csv)],
+            )
+        finally:
+            con.close()
+        work.replace(index)
+    finally:
+        rows_csv.unlink(missing_ok=True)
+        work.unlink(missing_ok=True)
+
+
+def _indexed_rows(index: Path, domains: set[str], names: set[str]):
+    if not domains and not names:
+        return
+    con = duckdb.connect(str(index), read_only=True)
+    try:
+        con.execute("CREATE TEMP TABLE wanted_domains(v VARCHAR)")
+        con.execute("CREATE TEMP TABLE wanted_names(v VARCHAR)")
+        if domains:
+            con.executemany("INSERT INTO wanted_domains VALUES (?)", [[d] for d in domains])
+        if names:
+            con.executemany("INSERT INTO wanted_names VALUES (?)", [[n] for n in names])
+        cur = con.execute(
+            "SELECT website, key, COALESCE(name, ''), COALESCE(handle, ''), COALESCE(country, '') FROM companies"
+            " WHERE website IN (SELECT v FROM wanted_domains) OR key IN (SELECT v FROM wanted_names) ORDER BY seq")
+        for website, key, name, handle, country in cur.fetchall():
+            yield {"website": website, "key": key or "", "name": name, "handle": handle, "country": country}
+    finally:
+        con.close()
+
+
+def build(path: Path, domains: set[str], names: set[str], cache_dir: Path | None = None) -> Reference:
+    """The rows matching these domains or names. With cache_dir, the file is parsed once into an
+    on-disk index keyed to its size and checksum; without it, every call scans the whole file."""
+    if cache_dir is None:
+        return _collect(_scan(path), domains, names)
+    index = _index_path(path, cache_dir)
+    if not index.exists():
+        _build_index(path, index)
+    return _collect(_indexed_rows(index, domains, names), domains, names)
 
 
 def load_or_build(dirs: dict, boards, pages: dict) -> Reference:

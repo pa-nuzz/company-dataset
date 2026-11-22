@@ -5,6 +5,7 @@ from pathlib import Path
 
 from company_dataset.models import Reject, SourceMeta, SourceRecord
 from company_dataset.normalize import ASHBY, GREENHOUSE, LEVER, clean_code
+from company_dataset.platforms import RECRUITEE, RIPPLING
 
 META = SourceMeta(
     name="moonie",
@@ -17,7 +18,7 @@ META = SourceMeta(
     attribution="moonie0201/ats-directory",
 )
 
-PROVIDER_MAP = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}
+PROVIDER_MAP = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY, "recruitee": RECRUITEE, "rippling": RIPPLING}
 
 
 def parse(path: Path):

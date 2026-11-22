@@ -12,4 +12,12 @@ data/cache/
 data/intermediate/
 data/review/
 
-# Kept in git: data/output/ (the deliverable) and reports/
+# Local working artifacts (not committed)
+data/store.db
+data/store_backups/
+data/runs/
+data/exports/
+data/raw_*/
+data/output.zip
+
+# Kept in git: data/output/ (the deliverable) and selected reports/

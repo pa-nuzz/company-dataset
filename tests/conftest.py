@@ -29,3 +29,6 @@ class FakeSession:
         if isinstance(item, BaseException):
             raise item
         return item
+
+    def post(self, url, json=None, timeout=None, **kwargs):
+        return self.get("POST " + url, timeout=timeout)

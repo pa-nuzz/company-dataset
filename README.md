@@ -1,96 +1,116 @@
-# company-dataset
+# Company Dataset
 
-A list of companies that hire through **Greenhouse, Lever or Ashby**, built from public datasets and the vendors' own public job-board APIs.
+A curated dataset of **22,682+ verified companies** hiring through Greenhouse, Lever, Ashby, SmartRecruiters, or Breezy HR — built from public datasets and vendor APIs.
 
-As of the last run (October 2026):
+## Current Stats (2026-11-05)
 
-- **8,373 companies** with all seven required fields: `data/output/companies_complete.csv`
-- **6,715 more** live companies missing at least one field: `data/output/companies_incomplete.csv`, which names the missing fields
-- **All 15,088** in one file for merging: `data/output/companies_total.csv`, with `complete` and `missing_fields` columns
-- 72% of the complete companies are headquartered in the US, UK or Canada
+| Metric | Count |
+|--------|-------|
+| Verified companies | 22,682 |
+| Incomplete (missing fields) | 6,652 |
+| Unresolved boards | 1,827 |
+| **Total unique companies** | **29,334** |
+| Confirmed ATS boards | 30,340 |
 
-All three start with the same required columns: `name`, `description`, `linkedin_url`, `website_url`, `careersite_url`, `ats_system`, `ats_code`. To share the data, send `companies_complete.csv` (or `companies_total.csv`) together with `source_manifest.csv`, which carries the credit some source licenses require.
+**By ATS (verified):** Greenhouse 7,049 • SmartRecruiters 6,369 • Ashby 4,261 • Breezy 3,053 • Lever 1,950
 
-Every company on the list has a board that answered the vendor's API when we checked it. Nothing is made up. If we couldn't find a value from a real source, the field is empty and the company goes in the incomplete file.
+Data exported to `data/exports/final_2026-11-05/` (not committed to git).
 
-## Where the values come from
+## What "Verified" Means
 
-- **careersite_url, ats_code**: the board itself, for the exact slug the vendor accepted.
-- **name**: the vendor's own record (the Greenhouse board name, the Ashby organization, the Lever page title). We fall back to the source datasets, then BigPicture, then the homepage title. Labels like "Open Roles" or "Acme Careers" don't count as names.
-- **website_url**: Ashby publishes each company's website, and Lever boards link to it. For Greenhouse we use the company domain its job links point to, or links in the company's own job ads. If none of those work, we look the company up in BigPicture by name, but only accept a domain that matches the board slug and whose homepage names the company.
-- **linkedin_url**: the LinkedIn company page linked from the company's homepage, cross-checked against BigPicture; otherwise BigPicture's record for that domain. It is never built from a name.
-- **description**: the description the company gives its own homepage (the meta description), or failing that its Greenhouse board intro. Descriptions must be in English: if a homepage is in another language we ask for its English version (and try `/en`, `/en-us`, `/en-gb`, `/us`); if there isn't one, the description is left empty. Recruiting copy ("Join our team…"), cookie banners and placeholders are filtered out, and long text is cut at a sentence boundary.
+A company is **verified** when:
+1. Its ATS board responds to the vendor API (live)
+2. Identity is confirmed (vendor record + cross-reference)
+3. All four required fields present: `name`, `description`, `ats_system`, `ats_code`
 
-Vendor demo and sandbox boards ("Lever Demo 2", "UiPath Workday Sandbox") and companies' internal, referral and talent-pool boards are left out, since they aren't separate companies.
+Optional fields (`website_url`, `linkedin_url`, `careersite_url`) are included where available.
 
-A spot check of 80 random rows against the live web found every board still live, every website the right company, and every LinkedIn link consistent with the company.
+## Data Files (per export)
 
-## Duplicates
+| File | Description |
+|------|-------------|
+| `companies_verified.csv` | Complete records (7 columns) |
+| `companies_incomplete.csv` | Live boards with gaps + `missing_fields` |
+| `unresolved_boards.csv` | Boards with no confirmed identity |
+| `evidence.csv` | Field-level provenance for every value |
+| `qa_report.json` | Counts, coverage, rejection reasons |
+| `sources.json` | Source manifests with licenses/checksums |
+| `SHA256SUMS` | Integrity hashes |
 
-Companies often have more than one board: one for contractors, one for interns, an old one left behind after switching ATS. We count boards as one company when they share a website, or when they share a LinkedIn page and also have matching names. The company appears once.
-
-Companies that only share a name are left alone, because many different companies have the same name (there are three unrelated companies called Patch on the list). They're listed in `data/review/possible_duplicates.csv` in case you want to check them by hand.
-
-## Files
-
-| File | What it holds |
-|---|---|
-| `data/output/companies_complete.csv` | The list: complete companies, seven columns |
-| `data/output/companies_total.csv` | Every live company, seven columns plus `complete` and `missing_fields` |
-| `data/output/companies_incomplete.csv` | Live companies with gaps, plus a `missing_fields` column |
-| `data/output/source_manifest.csv` | Every source, with its license, attribution, download date and checksum |
-| `reports/quality_report.md` | Counts, field coverage, sources, locations and rejections |
-| `data/review/companies_detailed.csv` | Every live company with extra columns: country, open jobs, the company's other boards, and where each value came from |
-| `data/review/rejected_records.csv` | Everything that was dropped and why |
-| `data/review/possible_duplicates.csv` | Companies that share a name with another row |
-
-`data/output/` and `reports/` are in git. Everything else under `data/` is rebuilt by the pipeline and isn't committed.
+Review artifacts: `data/review/` (duplicates, uncertain, dead boards, demoted rows).
 
 ## Sources
 
-Board slugs:
+**Board discovery (slugs):**
 
 | Source | License |
-|---|---|
-| [latmay/ats-career-page-urls](https://huggingface.co/datasets/latmay/ats-career-page-urls) | CC BY 4.0 |
-| [LastRound AI ATS directory](https://github.com/fyrosofttech/lastroundai-hiring-data) | CC BY 4.0 (credit LastRound AI and link their [study](https://lastroundai.com/blog/salary-transparency-study-2026)) |
-| [Headcount Labs job postings](https://huggingface.co/datasets/HeadcountLabs/job-postings) | CC BY 4.0 |
-| [kalebconfer job-board-directory](https://kalebconfer-sys.github.io/job-board-directory/) | CC0 (declared on the site; the repo has no LICENSE file) |
-| [moonie0201/ats-directory](https://github.com/moonie0201/ats-directory) | CC0 |
-| [Feashliaa/job-board-aggregator](https://github.com/Feashliaa/job-board-aggregator) | MIT |
-| [veresk06/open-ats-feed](https://github.com/veresk06/open-ats-feed) | MIT |
-| [Common Crawl](https://commoncrawl.org/terms-of-use/) index, 41 crawls from 2020 to 2026 | Common Crawl terms of use (we only use URL paths) |
+|--------|---------|
+| latmay/ats-career-page-urls (HF) | CC BY 4.0 |
+| LastRound AI ATS directory | CC BY 4.0 |
+| Headcount Labs job postings (HF) | CC BY 4.0 |
+| kalebconfer job-board-directory | CC0 |
+| moonie0201/ats-directory | CC0 |
+| Feashliaa/job-board-aggregator | MIT |
+| veresk06/open-ats-feed | MIT |
+| Common Crawl (41 crawls, 2020–2026) | CC Terms |
 
-Company details:
+**Company details:**
 
 | Source | License | Used for |
-|---|---|---|
-| [BigPicture free company dataset (2023 Q4)](https://huggingface.co/datasets/bigpictureio/companies-2023-q4-sm) | ODC-By 1.0 | LinkedIn handle, headquarters country, website lookup by name |
+|--------|---------|----------|
+| BigPicture free (2023 Q4) | ODC-By 1.0 | LinkedIn handle, HQ country, website lookup |
 
-## Why it's 15,000 and not 20,000–30,000
+## Methodology
 
-Merging every public dataset gives about 31,800 distinct boards, which is where a 20–30k estimate comes from. But about half of them no longer exist when you ask the vendor: the company moved to another ATS, shut down, or the slug in the dataset was never right. Including them would put companies on the list that don't use these systems.
+- **No fabrication**: Every board was queried live against the vendor API. Empty fields stay empty — companies with gaps go to `incomplete`.
+- **Deduplication**: Boards merged by shared website, or shared LinkedIn + matching name. Name-only matches kept separate (e.g., 3 unrelated "Patch" companies).
+- **Descriptions**: Homepage meta description (any language) → Greenhouse board intro. Recruiting copy, cookie banners, placeholders filtered. Truncated at sentence boundary.
+- **Verification tiers**: A (open jobs), B (Lever region mismatch), C (zero jobs + independent evidence).
 
-We tried to find more: Common Crawl back to 2020, a 5.7-million-posting dataset, GitHub lists, and guessing slugs from the domains of US, UK and Canadian companies. Each added a few hundred companies at most, because the sources mostly list the same companies (over 80% of live boards appear in two or more of them). The rest of the gap would need paid company data or brute-force slug guessing against the vendors' APIs.
-
-## Running it
+## Quick Start
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
-company-dataset all
 ```
 
-You can also run one stage at a time: `download`, `build`, `validate`, `enrich`, `export`, `report`. A full run from scratch downloads about 4 GB (the Headcount Labs parquet files can be deleted once `boards.csv` has been extracted from them) and makes tens of thousands of polite, rate-limited requests, so it takes a few hours. After that, everything is cached and reruns only fetch what's new or what failed last time.
+Requires Python 3.11+, `requests`, `duckdb`.
 
-Useful options:
+## Pipeline
 
-- `--refresh` re-downloads the sources
-- `--max-age-days N` rechecks boards last validated more than N days ago
-- `--workers` and `--per-host-delay` control request concurrency and pacing
+The pipeline operates over `data/store.db` in four stages:
 
-## Requirements
+```bash
+# 1. Discovery (resumable, writes data/raw/<source>/tokens.csv)
+python -m company_dataset.sources.wayback_cdx --raw data/raw
+python -m company_dataset.sources.commoncrawl_indexer --raw data/raw
+python -m company_dataset.sources.slug_prober --raw data/raw --db data/store.db --limit-per-vendor 5000
 
-Python 3.11+, `requests` and `duckdb` (used to read the Headcount Labs parquet files).
+# 2. Ingest
+company-dataset ingest --db data/store.db --raw data/raw --only wayback_cdx_2026_11_03
+
+# 3. Enrich + Quality
+company-dataset enrich --db data/store.db --raw data/raw --run myrun --out data/runs/myrun --per-ats 100000 --only-undecided
+company-dataset repair descriptions-cached --db data/store.db --run mydesc --from-runs myrun
+company-dataset repair final-checks --db data/store.db --run myqa --from-runs myrun,mydesc
+
+# 4. Export
+company-dataset export --db data/store.db --runs myrun,mydesc,myqa --fresh-origin myqa --out data/exports/final_YYYY-MM-DD
+```
+
+Each value has a row in `field_evidence` with its source. Corrections append under new run labels — no history rewriting.
+
+## Why Not 30,000+?
+
+Merging all public sources yields ~31,800 distinct board slugs. ~50% no longer exist when queried against vendor APIs (company moved ATS, shut down, or slug was wrong). Common Crawl, GitHub lists, and domain-based slug guessing each added only hundreds — sources overlap heavily (>80% of live boards appear in 2+ sources). The remainder would require paid data or brute-force API enumeration.
+
+## License
+
+This dataset aggregates public sources. Each source retains its original license (see `sources.json` per export). When redistributing, include `source_manifest.csv` for attribution.
+
+---
+
+**Last updated:** 2026-11-05  
+**Export:** `data/exports/final_2026-11-05/`

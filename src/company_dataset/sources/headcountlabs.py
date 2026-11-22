@@ -38,7 +38,7 @@ def run_download(dest_dir: Path, client) -> None:
     files = [f["path"] for f in json.loads(resp.text).get("files", []) if f.get("path", "").startswith("data/postings/")]
     if not files:
         raise RuntimeError("headcountlabs MANIFEST lists no postings files")
-    from company_dataset.download import stream_to
+    from company_dataset.http import stream_to
 
     for path in files:
         target = parquet_dir / Path(path).name

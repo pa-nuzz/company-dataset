@@ -1,3 +1,3 @@
-from company_dataset.cli import main
+from company_dataset.pipeline import main
 
 raise SystemExit(main())

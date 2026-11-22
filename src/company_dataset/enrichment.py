@@ -10,13 +10,15 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from company_dataset.build import load_candidates
 from company_dataset.http import HttpClient, RequestError
-from company_dataset.models import utc_now
+from company_dataset.models import load_candidates, utc_now
+from company_dataset.platforms import EXTRA_ATS, PERSONIO
 from company_dataset.normalize import (
     ASHBY,
+    BREEZY,
     GREENHOUSE,
     LEVER,
+    SMARTRECRUITERS,
     canonical_board_url,
     career_subdomain_parent,
     clean_website,
@@ -143,13 +145,18 @@ class _PageParser(HTMLParser):
         self.meta: dict[str, str] = {}
         self.anchors: list[tuple[str, str]] = []
         self._in_title = False
+        self._title_done = False
+        self._svg_depth = 0
         self._anchor_href: str | None = None
         self._anchor_text: list[str] = []
 
     def handle_starttag(self, tag, attrs):
         a = {k.lower(): (v or "") for k, v in attrs}
-        if tag == "title":
-            self._in_title = True
+        if tag == "svg":
+            self._svg_depth += 1
+        elif tag == "title":
+            # Inline SVG icons carry their own <title>; only the document's first one names the page.
+            self._in_title = not self._svg_depth and not self._title_done
         elif tag == "meta":
             key = (a.get("property") or a.get("name") or "").strip().lower()
             if key and "content" in a and key not in self.meta:
@@ -161,7 +168,10 @@ class _PageParser(HTMLParser):
             self._anchor_text = []
 
     def handle_endtag(self, tag):
-        if tag == "title":
+        if tag == "svg":
+            self._svg_depth = max(0, self._svg_depth - 1)
+        elif tag == "title":
+            self._title_done = self._title_done or self._in_title
             self._in_title = False
         elif tag == "a" and self._anchor_href is not None:
             self._close_anchor()
@@ -250,6 +260,16 @@ _BOILERPLATE_RE = re.compile(
     r"|attention required|verify you are human|privacy policy)",
     re.I,
 )
+# Meta descriptions that are not about the company at all: a bare media URL, domain-sale copy
+# on parked domains, or the site's latest news item / talk.
+_NOT_A_DESCRIPTION_RE = re.compile(
+    r"(?i:^https?://|^\S+\.(mp4|jpe?g|png|gif|webp|pdf)\b)"
+    r"|(?i:get this domain|this domain (name )?(is|may be) for sale|domain names? for sale|acquire the perfect domain|\bis for sale\b)"
+    r"|(?i:^in this (talk|episode|webinar|video|article|post|session|interview)\b)"
+    # News datelines: "LOS ANGELES— Today ..."
+    r"|\b[A-Z][A-Z .]{2,}\s?[—–]\s?(?i:today|yesterday|this week)\b"
+    r"|(?i:\b(received|wins|won) the award\b|\bpress release\b)",
+)
 _LABEL_PREFIX_RE = re.compile(r"^(about( us| the company)?|who we are|company (description|overview)|overview)\s*[:\-–—]\s*", re.I)
 MAX_DESCRIPTION_CHARS = 600
 MIN_DESCRIPTION_CHARS = 40
@@ -289,7 +309,7 @@ def clean_description(text) -> str | None:
     if len(s) < MIN_DESCRIPTION_CHARS:
         return None
     head = s[:200]
-    if _BOILERPLATE_RE.search(head):
+    if _BOILERPLATE_RE.search(head) or _NOT_A_DESCRIPTION_RE.search(s):
         return None
     if len(s) > MAX_DESCRIPTION_CHARS:
         cut = s[:MAX_DESCRIPTION_CHARS]
@@ -304,7 +324,8 @@ _FOREIGN_WORDS = frozenset(
     "der die das und mit für ist ein eine wir sie ihre unsere le la les des et pour avec une est nous vous "
     "el los las con por para que del una es em com uma não para os het een van voor met il di per che della "
     "dan yang untuk dengan og det er som på ikke af hos dig til vi jeg och att är pro je na se "
-    "de du au al ed ti si sua seu tu ton votre notre nos sur dans".split()
+    "de du au al ed ti si sua seu tu ton votre notre nos sur dans "
+    "ja joka sekä että myös tai kanssa noin ovat olla meidän".split()
 )
 # Letters that don't occur in English text (unlike é or ü, which do in loanwords and names).
 _FOREIGN_LETTERS = frozenset("æøåßěščřžůďťňłąęśźżőűğşıãõœ")
@@ -329,7 +350,11 @@ def is_english(text) -> bool:
     foreign = sum(w in _FOREIGN_WORDS or not _FOREIGN_LETTERS.isdisjoint(w) for w in words)
     if foreign > english:
         return False
-    if foreign == 0 and (english >= 2 or (len(text) < 100 and ascii_share >= 0.97)):
+    # Finnish/Estonian: no stopword overlap with the list above, but ä/ö in many words.
+    if words and sum(1 for w in words if "ä" in w or "ö" in w) >= max(2, 0.15 * len(words)):
+        return False
+    # English function words must be a real share of the text: Finnish "Usva on ... on" has two "on"s.
+    if foreign == 0 and ((english >= 2 and english >= 0.1 * len(words)) or (len(text) < 100 and ascii_share >= 0.97)):
         return True  # clear English evidence; langdetect misreads short or technical text
     DetectorFactory.seed = 0  # deterministic results across runs
     try:
@@ -338,7 +363,7 @@ def is_english(text) -> bool:
         best = None
     if best is not None and best.prob >= 0.8:
         return best.lang == "en"
-    return english > 0
+    return english >= 3 and foreign == 0
 
 
 def homepage_description(page: Page) -> str | None:
@@ -388,16 +413,23 @@ _BOARD_LABEL_RE = re.compile(
 # it only counts when it follows another word ("Agoda Sandbox", "🔴 Sandbox").
 _TEST_NAME_RE = re.compile(
     r"\S.*\bsandbox\b|\bdemo\b|^testing\b|testing purposes|\btest board\b|do not use|staging site"
-    r"|^example corp|internal training|confidential|^test\d*$|^testes$|testjobpost|_test\b|accessibility tests|^democorp$",
+    r"|^example corp|internal training|confidential|^test\d*$|^testes$|testjobpost|_test\b|accessibility tests|^democorp$"
+    # Vendor sandbox accounts ("Sandbox: Millennium Hotels") and seeded candidates ("ACME candidate 1").
+    r"|^sandbox\s*:|\bcandidate \d+$",
     re.I,
 )
-_TEST_CODE_RE = re.compile(r"sandbox\d*$|^demo\.|leverdemo|salesdemo|^testing$|^test\d*$|^example$", re.I)
+_TEST_CODE_RE = re.compile(r"sandbox\d*$|^demo\.|leverdemo|salesdemo|^testing$|^test\d*$|^example$|-demo$", re.I)
 
 # Secondary boards a company runs next to its main one: internal mobility, referral
 # intake, talent pools, general applications. Real boards, but not separate companies,
 # and their names are labels ("Coupang Internal", "Buildkite Talent Community").
 _AUX_NAME_RE = re.compile(
-    r"\binternal\b|referrals?\b|talent (community|pool|network)|general application|internal mobility"
+    # Boards the company itself marks as superseded: "Fortus (old)".
+    r"\((old|inactive|legacy|archived|closed|do not use)\)|"
+    # "Referral" only as a board label ("Acme Referrals", "Employee Referral Program"), not inside a
+    # name ("Peel Addiction Assessment And Referral Centre").
+    r"\binternal\b|\breferrals?\s+(only|program(me)?|portal|board|jobs|form|intake)\b|\bemployee referrals?\b|\breferrals\s*$|\(referrals?\)"
+    r"|talent (community|pool|network)|general application|internal mobility"
     r"|employees only|staff and referrals|^talent pool$",
     re.I,
 )
@@ -411,6 +443,15 @@ def is_auxiliary_board(name) -> bool:
     return bool(isinstance(name, str) and _AUX_NAME_RE.search(name))
 
 
+# Whole values that are page furniture or placeholders, never a company's name. Exact matches
+# only: "Home Depot", "Employers Holdings" and "EN Engineering" are names.
+_JUNK_NAMES = frozenset({
+    "null", "none", "undefined", "jobs", "careers", "unavailable", "n/a", "tbd", "default", "company", "home",
+    "employer", "employers", "en", "de", "fr", "es", "nl", "homepage", "home page", "start", "startseite", "welcome",
+    "accueil", "inicio", "index", "untitled", "my company", "your company", "company name", "test",
+})
+
+
 def clean_name(name, code: str = "") -> str | None:
     """A usable company name, or None for board labels and slug-shaped placeholders."""
     if not isinstance(name, str):
@@ -418,7 +459,14 @@ def clean_name(name, code: str = "") -> str | None:
     s = _WS_RE.sub(" ", _INVISIBLE_RE.sub("", fix_mojibake(unescape(name)))).strip()
     # Decoration around a name ("*Owl Labs*", "-ASG-") is not part of it.
     s = re.sub(r"^[*\-_~ ]+|[*\-_~ ]+$", "", s)
-    if len(s) < 2 or s.lower() in ("null", "none", "undefined", "jobs", "careers"):
+    # A "- LinkedIn" suffix copied from a page title is not part of the name ("VerSprite - LinkedIn").
+    s = re.sub(r"\s*[-|–—]\s*linkedin\s*$", "", s, flags=re.I).strip()
+    if len(s) < 2 or s.lower() in _JUNK_NAMES:
+        return None
+    if re.fullmatch(r"Q\d+", s):  # a Wikidata item id shown in place of a missing label
+        return None
+    # A hostname in the name field ("starter-roundhouse.wpmudev.host") is a misconfigured board, not a name.
+    if re.fullmatch(r"[a-z0-9-]+(\.[a-z0-9-]+){2,}", s):
         return None
     if _BOARD_LABEL_RE.search(s):
         return None
@@ -581,7 +629,9 @@ def board_from_validation(cand, outcome: dict) -> Board:
     code = outcome.get("code_validated") or cand.code
     # Only the host that actually answered decides the region; a source's "eu" hint
     # is just the order validation tried hosts in.
-    region = "eu" if cand.ats == LEVER and outcome.get("region_answered") == "eu" else None
+    region = "eu" if cand.ats in (LEVER, GREENHOUSE) and outcome.get("region_answered") == "eu" else None
+    if cand.ats == PERSONIO and outcome.get("region_answered") == "com":
+        region = "com"
     return Board(
         key=cand.key,
         ats=cand.ats,
@@ -615,7 +665,8 @@ def vendor_websites(board: Board, outcome: dict, vendor_page: dict | None) -> li
 
 def careersite_status(board: Board, vendor_page: dict | None) -> str:
     """ok, dead (vendor page gone) or unknown (not fetched / transient error)."""
-    if board.ats == GREENHOUSE:
+    if board.ats == GREENHOUSE or board.ats in EXTRA_ATS:
+        # These were validated against the board's own public endpoint, not a separate API.
         return "ok"
     if not vendor_page:
         return "unknown"
@@ -701,7 +752,7 @@ def run_enrich(
                     print(f"[enrich] {label}: {done}/{len(todo)}", flush=True)
         _save(cache_path, pages)
 
-    fetch_all([b.careersite_url for b, _ in boards if b.ats in (LEVER, ASHBY)], "vendor board pages")
+    fetch_all([b.careersite_url for b, _ in boards if b.ats in (LEVER, ASHBY, BREEZY)], "vendor board pages")
     fetch_all(
         [greenhouse_content_url(b.code) for b, o in boards if b.ats == GREENHOUSE and not vendor_websites(b, o, None) and (o.get("jobs_count") or 0) > 0],
         "greenhouse job ads (website links)",
@@ -759,6 +810,10 @@ def board_name_for_lookup(board: Board, outcome: dict, vendor_page: dict | None)
 
 def vendor_names(board: Board, outcome: dict, vendor_page: dict | None) -> list[str]:
     names: list[str] = []
+    if board.ats in EXTRA_ATS or board.ats == SMARTRECRUITERS:
+        n = clean_name(outcome.get("company_name"), board.code)
+        if n:
+            names.append(n)
     if board.ats == GREENHOUSE:
         n = clean_name(outcome.get("company_name"), board.code)
         if n:
@@ -769,6 +824,22 @@ def vendor_names(board: Board, outcome: dict, vendor_page: dict | None) -> list[
             names.append(n)
     if board.ats == LEVER and vendor_page and vendor_page.get("status") == "ok":
         n = clean_name(vendor_page.get("title"), board.code)
+        if n:
+            names.append(n)
+    if board.ats == BREEZY and vendor_page and vendor_page.get("status") == "ok":
+        # Breezy pages often have titles like "Openings at CompanyName" or "CompanyName - Careers"
+        # Extract company name before cleaning
+        raw_name = vendor_page.get("site_name") or vendor_page.get("title") or ""
+        # Try to extract company name from "Openings at CompanyName" or "CompanyName - Careers" patterns
+        import re
+        m = re.match(r"Openings at\s+(.+)", raw_name, re.I)
+        if m:
+            raw_name = m.group(1).strip()
+        else:
+            m = re.match(r"(.+?)\s*[-–—|]\s*Careers?", raw_name, re.I)
+            if m:
+                raw_name = m.group(1).strip()
+        n = clean_name(raw_name, board.code)
         if n:
             names.append(n)
     return names

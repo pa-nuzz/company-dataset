@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from company_dataset.models import Reject, SourceMeta, SourceRecord
@@ -8,7 +9,7 @@ from company_dataset.normalize import ASHBY, GREENHOUSE, LEVER, clean_code
 
 META = SourceMeta(
     name="feashliaa",
-    description="Job Board Aggregator active company lists (per-ATS board slugs harvested from Common Crawl CDX, refreshed daily)",
+    description="Job Board Aggregator active company lists (per-ATS board slugs for Greenhouse, Lever, Ashby, Workday, BambooHR, iCIMS; harvested from Common Crawl CDX, refreshed daily)",
     download_url="https://github.com/Feashliaa/job-board-aggregator",
     filename="companies.json",
     license="MIT",
@@ -21,7 +22,24 @@ _FILES = {
     "greenhouse": "greenhouse_companies.json",
     "lever": "lever_companies.json",
     "ashby": "ashby_companies.json",
+    "workday": "workday_companies.json",
+    "bamboohr": "bamboohr_companies.json",
+    "icims": "icims_companies.json",
 }
+
+
+def _code(ats: str, slug: str) -> str | None:
+    """The upstream lists store Workday as tenant|wdN|site and iCIMS without the careers- host prefix."""
+    if ats == "workday":
+        parts = slug.split("|")
+        if len(parts) != 3 or re.fullmatch(r"wd\d{1,3}", parts[0], re.I):
+            # A shard name in the tenant slot ("wd503|wd1|smartbank") is an upstream error.
+            return None
+        return clean_code(ats, f"{parts[0]}.{parts[1]}/{parts[2]}")
+    if ats == "icims":
+        label = slug.strip("-").lower()
+        return clean_code(ats, label if label.startswith(("careers-", "jobs-")) else f"careers-{label}")
+    return clean_code(ats, slug)
 _BASE = "https://raw.githubusercontent.com/Feashliaa/job-board-aggregator/main/data/"
 
 
@@ -50,7 +68,7 @@ def parse(path: Path):
             if not isinstance(slug, str):
                 continue
             slug = slug.strip()
-            raw_slug, slug = slug, clean_code(ats, slug)
+            raw_slug, slug = slug, _code(ats, slug)
             if slug is None:
                 rejects.append(Reject(source=META.name, reason="invalid_slug", detail=raw_slug, row_ref=ref, ats=ats))
                 continue

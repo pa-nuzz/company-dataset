@@ -1,0 +1,118 @@
+ats,code,company_name,website,slug,source,label
+ashby,Compound Jobs,Twenty Labs,https://twentylabs.ai,compound-ai,homepage_link,exclude
+ashby,Coworker,Coworker.ai,https://coworker.ai,get-coworker,homepage_link,legit
+ashby,Nash,Nash,https://www.nash.ai,usenash,homepage_link,legit
+ashby,clover-sonoma,Clover Sonoma,https://cloversonoma.com,clover-stornetta-farms-inc.,bigpicture_by_verified_domain,legit
+ashby,datawizz,Gamut,https://www.gamut.so,datawizzai,homepage_link,exclude
+ashby,gotphoto,GotPhoto,https://www.gotphoto.com,fde-gotphoto,bigpicture_by_verified_domain,unclear
+ashby,integral-de,Integral Services GmbH,https://www.integral.de,getintegral,homepage_link,unclear
+ashby,intro,Intro,https://intro.co,useintro,bigpicture_by_verified_domain,legit
+ashby,meetmarvin,Marvin Behavioral Health,https://www.meetmarvin.com,joinmarvin,bigpicture_by_verified_domain,legit
+ashby,pivotal-health,Pivotal Health,https://pivotalhealth.ai,radix-health-io,homepage_link,exclude
+ashby,prosper-ai,Prosper AI,https://www.getprosper.ai,prospertechnologies,homepage_link,unclear
+ashby,sim,Sim,https://www.sim.ai,simdotai,homepage_link,legit
+ashby,sona,Sona,https://www.sona.ai,getsona,homepage_link,legit
+ashby,tight,Tight,https://www.tight.com,hurdlr,homepage_link,legit
+bamboohr,cornerstoneleague,Cornerstone League,https://www.cornerstoneleague.coop,cornerstonecul,homepage_link,legit
+bamboohr,keyhvac,Key Heating & Cooling,https://www.keyhvac.com,key-heating-&-air-conditioning-inc.,bigpicture_by_verified_domain,legit
+bamboohr,nvsconsulting,NVS Consulting,https://nvsconsulting.io,nouveauconsulting,bigpicture_by_verified_domain,unclear
+bamboohr,ppmi,PPMI,https://ppmi.lt,public-policy-and-management-institute,bigpicture_by_verified_domain,legit
+bamboohr,tieva,TIEVA,https://tieva.co.uk,we-are-tieva,homepage_link,legit
+breezy,anka,Anka,https://www.anka.africa,afrikrea,bigpicture_by_verified_domain,legit
+breezy,audiohook,Audiohook,https://audiohook.com,getaudiohook,bigpicture_by_verified_domain,legit
+breezy,bounce-therapy,Bounce Therapy,https://bouncetherapy.com,bounce-aba,bigpicture_by_verified_domain,unclear
+breezy,busha,Busha,https://busha.io,getbusha,careersite_link,legit
+breezy,cardinal-technology-systems-corp,"Cardinal Technology Systems, Corp.",https://www.ctech-sys.com,cardinal-technology-system-corp,bigpicture_by_verified_domain,legit
+breezy,carmen-schools-of-science-technology,Carmen Schools of Science & Technology,https://carmenschools.org,carmen-high-school-of-science-technology,homepage_link,unclear
+breezy,girlsincgreaterpgh,Girls Inc. of Greater Pittsurgh,https://girlsincpgh.org,girls-inc-pittsburgh,homepage_link,legit
+breezy,morgan-s-wonderland-camp,Morgan's Camp,https://morganscamp.org,MorgansInclusion,homepage_link,unclear
+breezy,northwest-connecticut-transit-district,Northwestern Connecticut Transit District,https://www.nwcttransit.com,northwestern-ct-transit-district,bigpicture_by_verified_domain,legit
+breezy,personified-tech,Personified Tech,https://personified.tech,wearepersonified,careersite_link,legit
+breezy,subscribe,SUBSCRIBE,https://subscribeplatform.com,safx,bigpicture_by_verified_domain,unclear
+breezy,team-uis,Team UIS,https://teamuis.com,utilities-instrumentation-service-inc,bigpicture_by_verified_domain,legit
+breezy,us-digital-response,U.S. Digital Response,https://www.usdigitalresponse.org,usdr,bigpicture_by_verified_domain,legit
+greenhouse,alku,ALKU,https://www.alku.com,lifeatalku,bigpicture_by_verified_domain,unclear
+greenhouse,fenniesdaynurseries,Fennies Day Nurseries Ltd,https://www.fennies.com,day-nurseries-limited,bigpicture_by_verified_domain,unclear
+greenhouse,globalwebindex,GWI,https://www.gwi.com,gwidotcom,bigpicture_by_verified_domain,legit
+greenhouse,konovo,Konovo,https://konovo.com,hello-konovo,homepage_link,legit
+greenhouse,taketwo,"Take-Two Interactive Software, Inc.",https://www.take2games.com,take-2-interactive-software-inc-,bigpicture_by_verified_domain,legit
+greenhouse,teammobot,Mobot,https://www.mobot.io,team-mobot,bigpicture_by_verified_domain,legit
+greenhouse,theadvocates,"The Advocates - Driggs, Bills & Day",https://www.theadvocates.com,driggs-bills-&-day-pc,bigpicture_by_verified_domain,legit
+icims,berlinnursingandrehab-careers-fundltc,Berlin Nursing and Rehabilitation Center,https://berlinnursingandrehab.com,berlin-health-care-llc,bigpicture_by_verified_domain,exclude
+icims,careers-bncsystems,"Business Network Consulting, Ltd.",https://www.bncsystems.com,bnc---business-network-consulting,bigpicture_by_verified_domain,legit
+join,agostinirecruitingcom,,https://www.agostinirecruiting.com,agostini-associates-recruiting,bigpicture_by_verified_domain,legit
+join,ascentmadrid,Ascent Madrid,https://www.ascentmadrid.com,ascent-activos,careersite_link,unclear
+join,fidra,Fidra-Treuhand AG,https://www.fidra.ch,fiduciaire-fidra-sa-fidra-treuhand-ag,careersite_link,legit
+join,frisierbar-stuttgart,frisierbar,https://www.frisierbar-stuttgart.de,qode-themes,careersite_link,exclude
+join,grainesdefermiers,Graines de fermiers,http://www.sd.grainesdefermiers.org,association-graines-de-fermiers,bigpicture_by_verified_domain,unclear
+join,gvk,Gesellschaft für Versorgungskonzepte mbH,https://www.versorgungskompass.de,gvk-gesellschaft-f%C3%BCr-versorgungskonzepte-mbh,careersite_link,unclear
+join,gvk,Gesellschaft für Versorgungskonzepte mbH,https://www.versorgungskompass.de,gvk-gesellschaft-für-versorgungskonzepte-mbh,bigpicture_by_verified_domain,unclear
+join,iffarth-consulting,Iffarth Consulting,http://iffarth-consulting.de,iffarth-software-consulting,careersite_link,legit
+join,sdk,SDK GmbH,https://www.sdk.at,sdkgmbh,bigpicture_by_verified_domain,legit
+join,sofipros,SOFIPROS,https://www.sofipros.fr,lfl-patrimoine,careersite_link,exclude
+join,sperlingshof,Sperlingshof,https://sperlingshof.de,kinder--und-jugendheim-sperlingshof-e-v-,careersite_link,unclear
+lever,Way,Way,https://www.way.co,letsway,bigpicture_by_verified_domain,legit
+lever,csit,Centre for Strategic Infocomm Technologies,https://www.csit.gov.sg,csitsg,bigpicture_by_verified_domain,unclear
+lever,flashapp,Flash,https://flashapp.com.br,meuflash,bigpicture_by_verified_domain,unclear
+lever,motifsystems,Motif,https://motif.io,buildwithmotif,homepage_link,legit
+personio,boardwise,Boardwise,https://www.boardwise.io,gertrud-digital-gmbh,homepage_link,exclude
+personio,dmrz,DMRZ,https://www.dmrz.de,deutsches-medizinrechenzentrum-gmbh,bigpicture_by_verified_domain,unclear
+personio,fairr-1,FAIRR Initiative,https://www.fairr.org,farm-animal-investment-risk-&-return-fairr-,bigpicture_by_verified_domain,legit
+personio,faqhealth,F/A/Q – The Better Health Group,https://www.faq.health,faqhealth,bigpicture_by_verified_domain,unclear
+personio,hpe,HPE GROUP,https://www.hpe.eu,hpe-coxa,bigpicture_by_verified_domain,unclear
+personio,htgf,High-Tech Gründerfonds Management GmbH,https://www.htgf.de,high-tech-gruenderfonds,bigpicture_by_verified_domain,legit
+personio,htgf,High-Tech Gründerfonds Management GmbH,https://www.htgf.de,high-tech-grunderfonds,homepage_link,legit
+personio,lumas,LUMAS Art Editions GmbH,https://www.lumas.de,luma-gmbh,bigpicture_by_verified_domain,unclear
+pinpoint,aeriz,Aeriz,https://aeriz.com,aer%C4%ABz,careersite_link,legit
+pinpoint,aeriz,Aeriz,https://aeriz.com,aerīz,bigpicture_by_verified_domain,legit
+pinpoint,aria,ARIA,https://aria.org.uk,advanced-research-and-invention-agency,bigpicture_and_wikidata_by_domain,legit
+pinpoint,cfc,CFC,https://www.cfc.com,cfc-underwriting-ltd,bigpicture_by_verified_domain,legit
+pinpoint,cwc,City of Westminster College,https://ucg.ac.uk,united-colleges-group,bigpicture_by_verified_domain,exclude
+pinpoint,dext,Dext,https://dext.com,fillyourhandle,careersite_link,exclude
+pinpoint,dext,Dext,https://dext.com,hellodext,homepage_link,legit
+pinpoint,focus,Focus,https://focus.careers,fillyourhandle,careersite_link,exclude
+pinpoint,frazil,Frazil,https://frazil.com,freezing-point,bigpicture_by_verified_domain,unclear
+pinpoint,hollandamericaprincess,Holland America/Princess Alaska-Yukon Land Operations,https://www.alaskatourjobs.com,holland-america-line-princess-cruises--alaska-and-the-yukon,bigpicture_by_verified_domain,unclear
+pinpoint,leadingedgeaviation,Leading Edge Aviation,https://leadingedgeaviation.com,beleadingedge,bigpicture_by_verified_domain,legit
+pinpoint,light,Light,https://light.inc,fillyourhandle,careersite_link,exclude
+pinpoint,light,Light,https://light.inc,uselightinc,bigpicture_by_verified_domain,legit
+pinpoint,openspace,Midpeninsula Regional Open Space District,https://www.openspace.org,fillyourhandle,careersite_link,exclude
+pinpoint,openspace,Midpeninsula Regional Open Space District,https://www.openspace.org,midpenopenspace,bigpicture_and_wikidata_by_domain,unclear
+pinpoint,pcc,Portland Community College,https://www.pcc.edu,fillyourhandle,careersite_link,exclude
+pinpoint,peppyhealth,Peppy,https://peppy.health,getpeppy,bigpicture_by_verified_domain,legit
+pinpoint,protrain,Professional Training Solutions,https://www.protrain-solutions.co.uk,protrainuk,bigpicture_by_verified_domain,legit
+pinpoint,qac,Queen Alexandra Charity,https://www.qac.ac.uk,queen-alexandra-college,bigpicture_by_verified_domain,unclear
+recruitee,congreshotelliege,Hotel Liège Congrès,https://www.congreshotelliege.be,selys-congres-liege,homepage_link,unclear
+recruitee,digitickets,DigiTickets,https://www.digitickets.co.uk,digital-ticketing-systems-limited,bigpicture_by_verified_domain,legit
+recruitee,hotelcuijk,Hotel Cuijk - Nijmegen,https://www.hotelcuijk.nl,van-der-valk-hotel-cuijk,bigpicture_by_verified_domain,legit
+recruitee,hotelnijmegen,Hotel Nijmegen - Lent,https://www.valknijmegen.nl,van-der-valk-hotel-nijmegen-lent,bigpicture_and_wikidata_by_domain,legit
+recruitee,msf,MSF International,https://www.msf.org,m-decins-sans-fronti-res-msf-,careersite_link,legit
+recruitee,myr,Myr,https://www.myr.gg,myr1,bigpicture_by_verified_domain,legit
+recruitee,myr,Myr,https://www.myr.gg,recruitee,careersite_link,exclude
+recruitee,myr,Myr,https://www.myr.gg,tellenthq,careersite_link,exclude
+recruitee,opergraz,Opernhaus Graz GmbH,https://oper-graz.buehnen-graz.com,opergraz,careersite_link,legit
+rippling,bamboo-health-careers,Bamboo Health,https://bamboohealth.com,bamboo-hlth,bigpicture_by_verified_domain,legit
+rippling,icp-globalcareers,ICP,https://www.icpnet.com,icp_3,bigpicture_by_verified_domain,legit
+smartrecruiters,LouvreHotelsGroup,Louvre Hotels Group,https://louvrehotelscareers.com,louvre-h-tels,careersite_link,legit
+smartrecruiters,North40Outfitters,North40 Outfitters,https://north40.com,csww-inc,bigpicture_by_verified_domain,exclude
+smartrecruiters,WabashValleyPowerAlliance,Wabash Valley Power Alliance,https://www.wvpa.com,wabash-valley-power-association,bigpicture_by_verified_domain,legit
+smartrecruiters,authenticbrandsgroup,Authentic Brands Group,https://authentic.com,weareauthentic,bigpicture_by_verified_domain,legit
+smartrecruiters,virtusapolaris,Virtusa Polaris,https://virtusapolaris.com,polaris-financial-technologylimited,bigpicture_by_verified_domain,legit
+teamtailor,babysam,BabySam AB,https://www.babysam.se,babyworld-ab,careersite_link,exclude
+teamtailor,barrosyerrazuriz,Barros & Errázuriz,https://www.bye.cl,barros-errazuriz-abogados,bigpicture_by_verified_domain,legit
+teamtailor,ecm-crit,ECM - Engineering Conception Maintenance,https://www.ecm-crit.com,ecm_3,bigpicture_by_verified_domain,legit
+teamtailor,hartbageri,HART Bageri,https://hartbageri.com,hartbakery,bigpicture_by_verified_domain,legit
+teamtailor,hushallningssallskapetkalmarkronoberg,Hushållningssällskapet Kalmar Kronoberg Blekinge,https://hushallningssallskapet.se,hskkb,careersite_link,unclear
+teamtailor,hushallningssallskapetkalmarkronoberg,Hushållningssällskapet Kalmar Kronoberg Blekinge,https://hushallningssallskapet.se,hush-llningss-llskapens-f-rbund,bigpicture_by_verified_domain,exclude
+teamtailor,kohosales,Koho Sales,https://www.kohosales.com,myynninkehitysyhti-koho,bigpicture_by_verified_domain,legit
+teamtailor,lacotelarete,La Côte & L'Arête,https://www.lacoteetlarete.fr,lacotelarete,bigpicture_by_verified_domain,legit
+teamtailor,ngi,NGI,https://www.ngi.no,norwegian-geotechnical-institute-ngi-,homepage_link,legit
+teamtailor,raddabarnen,Rädda Barnen,https://www.raddabarnen.se,save-the-children-sweden,careersite_link,legit
+teamtailor,rdtingenieros,RDT,https://www.rdt.com,rdt-com,careersite_link,legit
+teamtailor,returnoninvestment,ROI Automotive Ltd,https://www.roiltd.co.uk,return-on-investment-ltd,bigpicture_by_verified_domain,legit
+teamtailor,rev,REV,https://www.therev.team,revpeople,bigpicture_by_verified_domain,legit
+teamtailor,severpharmasolutions,QPharma,https://qpharma.com,sever-pharma-solutions,homepage_link,exclude
+workable,abide,Abide,https://abide.com,carpenters-code,bigpicture_by_verified_domain,exclude
+workable,assetnote,Assetnote,https://www.slcyber.io,searchlight-cyber,bigpicture_by_verified_domain,exclude
+workable,goo,Goo,https://www.goo.live,gooplatform,bigpicture_by_verified_domain,legit
+workable,tcitechs,TCI Technologies,https://tcitechs.com,transitional-computing-inc-,bigpicture_by_verified_domain,legit

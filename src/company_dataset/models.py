@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import csv
+from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
+from pathlib import Path
 
 # The 7 business-required fields (per the project spec). `country` is additional
 # metadata, not a required field, and must never be counted toward this list.
@@ -18,6 +20,7 @@ class SourceMeta:
     license_url: str = ""
     license_note: str = ""
     attribution: str = ""
+    downloadable: bool = True  # False: download_url documents the origin; the raw file came from a one-off harvest
 
 
 @dataclass
@@ -69,6 +72,7 @@ class BoardValidation:
     http_status: int | None = None
     jobs_count: int | None = None
     company_name: str | None = None
+    company_identifier: str | None = None
     description: str | None = None
     website_url: str | None = None
     country: str | None = None
@@ -90,6 +94,7 @@ class BoardValidation:
             "http_status": self.http_status,
             "jobs_count": self.jobs_count,
             "company_name": self.company_name,
+            "company_identifier": self.company_identifier,
             "description": self.description,
             "website_url": self.website_url,
             "country": self.country,
@@ -102,8 +107,31 @@ class BoardValidation:
 
     @classmethod
     def from_dict(cls, d: dict) -> "BoardValidation":
-        return cls(**d)
+        names = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in d.items() if k in names})
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def load_candidates(dirs: dict) -> list[Candidate]:
+    path = Path(dirs["intermediate"]) / "candidates.csv"
+    candidates: list[Candidate] = []
+    if not path.exists():
+        return candidates
+    with open(path, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            alt = [c for c in (row.get("alt_codes") or "").split(";") if c]
+            candidates.append(
+                Candidate(
+                    ats=row["ats"],
+                    codes=[row["code"]] + alt,
+                    region=row.get("region") or None,
+                    name=row.get("name") or None,
+                    name_source=row.get("name_source") or "",
+                    careersite_urls=[u for u in (row.get("careersite_urls") or "").split("; ") if u],
+                    sources=[s for s in (row.get("sources") or "").split("; ") if s],
+                )
+            )
+    return candidates

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from company_dataset.models import Reject, SourceMeta, SourceRecord
 from company_dataset.normalize import ASHBY, GREENHOUSE, LEVER, clean_code, parse_board_url
+from company_dataset.platforms import EXTRA_ATS, PERSONIO, RECRUITEE, RIPPLING, WORKABLE, WORKDAY
 
 META = SourceMeta(
     name="kaleb",
@@ -17,7 +18,16 @@ META = SourceMeta(
     attribution="kalebconfer-sys/job-board-directory (revivacatch.com), built 2026-10-15",
 )
 
-PLATFORM_MAP = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}
+PLATFORM_MAP = {
+    "greenhouse": GREENHOUSE,
+    "lever": LEVER,
+    "ashby": ASHBY,
+    "workable": WORKABLE,
+    "workday": WORKDAY,
+    "recruitee": RECRUITEE,
+    "personio": PERSONIO,
+    "rippling": RIPPLING,
+}
 
 
 def parse(path: Path):
@@ -33,6 +43,17 @@ def parse(path: Path):
             ats = PLATFORM_MAP.get(platform)
             if ats is None:
                 rejects.append(Reject(source=META.name, reason="unsupported_ats", detail=platform or "(empty)", row_ref=ref, raw=dict(row)))
+                continue
+            if ats in EXTRA_ATS:
+                # Tokens on these platforms aren't the full board identifier (Workday needs
+                # host and site), so the board URL is the source of truth.
+                board_url = (row.get("board_url") or "").strip()
+                parsed = parse_board_url(board_url) if board_url else None
+                if parsed is None or parsed.ats != ats:
+                    rejects.append(Reject(source=META.name, reason="unparseable_url", detail=board_url, row_ref=ref, ats=ats, raw=dict(row)))
+                    continue
+                name = (row.get("company") or "").strip() or None
+                records.append(SourceRecord(source=META.name, ats=ats, code=parsed.code, region=parsed.region, name=name, careersite_url=board_url, row_ref=ref))
                 continue
             token = (row.get("token") or "").strip()
             raw_token, token = token, clean_code(ats, token)

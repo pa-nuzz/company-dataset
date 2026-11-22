@@ -4,22 +4,42 @@ import re
 from dataclasses import dataclass
 from urllib.parse import quote, unquote, urlsplit
 
+from company_dataset.platforms import EXTRA_ATS, clean_extra_code, extra_api_url, extra_board_url, parse_extra
+
 GREENHOUSE = "greenhouse"
 LEVER = "lever"
 ASHBY = "ashby"
-SUPPORTED_ATS = (ASHBY, GREENHOUSE, LEVER)
+SMARTRECRUITERS = "smartrecruiters"
+BREEZY = "breezy"
+CORE_ATS = (ASHBY, BREEZY, GREENHOUSE, LEVER, SMARTRECRUITERS)
+SUPPORTED_ATS = tuple(sorted(CORE_ATS + EXTRA_ATS))
 
 _HOSTS = {
     "job-boards.greenhouse.io": GREENHOUSE,
     "boards.greenhouse.io": GREENHOUSE,
     "boards-api.greenhouse.io": GREENHOUSE,
+    "job-boards.eu.greenhouse.io": GREENHOUSE,
+    "boards.eu.greenhouse.io": GREENHOUSE,
     "jobs.lever.co": LEVER,
     "jobs.eu.lever.co": LEVER,
     "api.lever.co": LEVER,
     "api.eu.lever.co": LEVER,
     "jobs.ashbyhq.com": ASHBY,
     "api.ashbyhq.com": ASHBY,
+    "careers.smartrecruiters.com": SMARTRECRUITERS,
+    "jobs.smartrecruiters.com": SMARTRECRUITERS,
+    "api.smartrecruiters.com": SMARTRECRUITERS,
 }
+
+BREEZY_HOST_SUFFIX = ".breezy.hr"
+BREEZY_RESERVED_LABELS = frozenset({"api", "app", "developer", "help", "status", "www"})
+
+
+def _breezy_host_code(host: str) -> str | None:
+    labels = host.split(".")
+    if len(labels) == 3 and host.endswith(BREEZY_HOST_SUFFIX):
+        return labels[0]
+    return None
 
 
 @dataclass(frozen=True)
@@ -66,18 +86,28 @@ def parse_board_url(raw) -> ParsedBoard | None:
         text = "https://" + text
     try:
         parts = urlsplit(text)
-        host = (parts.hostname or "").lower()
+        raw_host = (parts.hostname or "").lower()
     except ValueError:
         return None
-    if host.startswith("www."):
-        host = host[4:]
+    host = raw_host[4:] if raw_host.startswith("www.") else raw_host
     ats = _HOSTS.get(host)
+    breezy_code = None
     if ats is None:
-        return None
+        breezy_code = _breezy_host_code(raw_host)
+        if breezy_code is not None:
+            ats = BREEZY
     segs = [unquote(seg) for seg in parts.path.split("/") if seg != ""]
+    if ats is None:
+        extra = parse_extra(host, segs)
+        if extra is None:
+            return None
+        ats, code, region = extra
+        code = clean_extra_code(ats, code)
+        return ParsedBoard(ats=ats, code=code, region=region) if code else None
     code = None
     region = None
     if ats == GREENHOUSE:
+        region = "eu" if host in ("job-boards.eu.greenhouse.io", "boards.eu.greenhouse.io") else None
         if segs and segs[0] == "embed":
             code = _query_param(parts.query, "for")
         elif len(segs) >= 3 and segs[0] == "v1" and segs[1] == "boards":
@@ -93,12 +123,20 @@ def parse_board_url(raw) -> ParsedBoard | None:
             region = "eu" if host == "jobs.eu.lever.co" else None
             if segs:
                 code = segs[0]
-    else:
+    elif ats == ASHBY:
         if host == "api.ashbyhq.com":
             if len(segs) >= 3 and segs[0] == "posting-api" and segs[1] == "job-board":
                 code = segs[2]
         elif segs:
             code = segs[0]
+    elif ats == SMARTRECRUITERS:
+        if host == "api.smartrecruiters.com":
+            if len(segs) >= 3 and segs[0] == "v1" and segs[1] == "companies":
+                code = segs[2]
+        elif segs:
+            code = segs[0]
+    elif ats == BREEZY:
+        code = breezy_code
     if code is None:
         return None
     code = clean_code(ats, code)
@@ -114,9 +152,13 @@ def clean_code(ats: str, code) -> str | None:
     "block;"); the slug is what comes before it. Ashby organization slugs may contain
     single spaces ("Applied Compute"). Validation decides whether the board is real.
     """
+    if ats in EXTRA_ATS:
+        return clean_extra_code(ats, code.split("\\", 1)[0] if isinstance(code, str) else code)
     if not isinstance(code, str):
         return None
     code = code.split("\\", 1)[0].strip().rstrip(";").strip()
+    if ats == BREEZY and code.casefold() in BREEZY_RESERVED_LABELS:
+        return None
     if ats == ASHBY and " " in code:
         if not re.fullmatch(r"[^\s]+( [^\s]+)*", code) or not is_valid_slug(code.replace(" ", "-")):
             return None
@@ -127,13 +169,18 @@ def clean_code(ats: str, code) -> str | None:
 def canonical_board_url(ats: str, code: str, region: str | None = None) -> str:
     q = quote(code, safe="")
     if ats == GREENHOUSE:
-        return f"https://job-boards.greenhouse.io/{q}"
+        host = "job-boards.eu.greenhouse.io" if region == "eu" else "job-boards.greenhouse.io"
+        return f"https://{host}/{q}"
     if ats == LEVER:
         host = "jobs.eu.lever.co" if region == "eu" else "jobs.lever.co"
         return f"https://{host}/{q}"
     if ats == ASHBY:
         return f"https://jobs.ashbyhq.com/{q}"
-    raise ValueError(f"unsupported ats: {ats}")
+    if ats == SMARTRECRUITERS:
+        return f"https://careers.smartrecruiters.com/{q}"
+    if ats == BREEZY:
+        return f"https://{q}.breezy.hr"
+    return extra_board_url(ats, code, region)
 
 
 def canonical_api_url(ats: str, code: str, region: str | None = None) -> str:
@@ -145,7 +192,11 @@ def canonical_api_url(ats: str, code: str, region: str | None = None) -> str:
         return f"https://{host}/v0/postings/{q}?mode=json"
     if ats == ASHBY:
         return f"https://api.ashbyhq.com/posting-api/job-board/{q}"
-    raise ValueError(f"unsupported ats: {ats}")
+    if ats == SMARTRECRUITERS:
+        return f"https://api.smartrecruiters.com/v1/companies/{q}/postings?limit=100"
+    if ats == BREEZY:
+        return f"https://{q}.breezy.hr/json"
+    return extra_api_url(ats, code, region)
 
 
 def greenhouse_board_info_url(code: str) -> str:
@@ -168,6 +219,17 @@ _NON_COMPANY_HOSTS = (
     "notion.site", "medium.com", "outlook.com", "safelinks.protection.outlook.com",
     "typeform.com", "hubspot.com", "calendly.com", "cloudflare.com", "gstatic.com",
     "googleapis.com", "w3.org", "schema.org", "apple.com",
+    # Vendors and widgets that hosted boards link to, never a company's own site.
+    "join.com", "personio.de", "personio.com", "workablemail.com", "pinterest.com", "vimeo.com",
+    "onetrust.com", "cookielaw.org", "cookiebot.com", "iubenda.com", "termly.io", "usercentrics.eu",
+    "play.google.com", "apps.apple.com", "maps.app.goo.gl", "xing.com", "kununu.com", "threads.net",
+    "wa.me", "t.me", "spotify.com",
+    # Careers-site platforms: a company's jobs pages hosted for it, never its main site.
+    "jibeapply.com", "careerplug.com", "applicantpro.com", "hrmdirect.com", "zohorecruit.com", "zohorecruit.eu", "freshteam.com",
+    "recruiterbox.com", "hirebridge.com", "softgarden.io", "softgarden.de", "jobylon.com", "homerun.co", "talentlyft.com",
+    # Domain marketplaces and parking pages: a "homepage" there is a domain for sale.
+    "hugedomains.com", "saw.com", "sedo.com", "dan.com", "afternic.com", "undeveloped.com", "bodis.com",
+    "parkingcrew.net", "above.com", "buydomains.com", "efty.com", "atom.com", "squadhelp.com", "brandbucket.com", "recaptcha.net", "hcaptcha.com", "sentry.io", "intercom.io",
 )
 _HOST_RE = re.compile(r"^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 CAREER_SUBDOMAINS = ("careers", "career", "jobs", "job", "join", "work", "talent", "apply", "recruiting", "hiring")
@@ -189,6 +251,26 @@ def host_of(url) -> str:
 
 def is_non_company_host(host: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in _NON_COMPANY_HOSTS)
+
+
+def normalize_linkedin(url) -> str | None:
+    """https://www.linkedin.com/<kind>/<handle> with no trailing slash, query or fragment, or None if it is not one."""
+    if not isinstance(url, str) or not url.strip():
+        return None
+    text = url.strip()
+    if "://" not in text:
+        text = "https://" + text
+    try:
+        parts = urlsplit(text)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return None
+    if host != "linkedin.com" and not host.endswith(".linkedin.com"):
+        return None
+    segments = [s for s in parts.path.split("/") if s]
+    if len(segments) != 2:
+        return None
+    return f"https://www.linkedin.com/{segments[0]}/{segments[1]}"
 
 
 def clean_website(url) -> str | None:
@@ -224,3 +306,19 @@ def career_subdomain_parent(host: str) -> str | None:
     if len(labels) >= 3 and labels[0] in CAREER_SUBDOMAINS:
         return ".".join(labels[1:])
     return None
+
+
+def validation_endpoint(ats: str, code: str, outcome: dict) -> str:
+    """Return the actual URL that was validated, using the code that validated.
+    
+    For SmartRecruiters: use the original token case in the API URL.
+    For Lever: use the EU host if the EU host answered.
+    For others: use the standard canonical API URL with the validated code.
+    """
+    validated_code = outcome.get("code_validated") or code
+    if ats == SMARTRECRUITERS:
+        return canonical_api_url(SMARTRECRUITERS, validated_code)
+    if ats == LEVER:
+        region = outcome.get("region_answered")
+        return canonical_api_url(LEVER, validated_code, region)
+    return canonical_api_url(ats, validated_code)

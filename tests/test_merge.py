@@ -1,4 +1,4 @@
-from company_dataset.build import merge_records
+from company_dataset.legacy.build import merge_records
 from company_dataset.models import SourceRecord
 
 
